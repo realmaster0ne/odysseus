@@ -247,20 +247,29 @@ def parse_body(body: str) -> Dict[str, Any]:
     if not body or not body.strip():
         return out
 
-    sections: List[tuple[Optional[str], List[str]]] = [(None, [])]
+    sections: List[tuple[Optional[str], Optional[str], List[str]]] = [(None, None, [])]
+    in_fence = False
     for line in body.splitlines():
-        m = re.match(r"^##\s+(.*?)\s*$", line)
+        if re.match(r"^\s*(```|~~~)", line):
+            in_fence = not in_fence
+        m = None if in_fence else re.match(r"^##\s+(.*?)\s*$", line)
         if m:
             heading = m.group(1).strip().lower()
             key = _HEADING_TO_KEY.get(heading)
-            sections.append((key, []))
+            sections.append((key, line, []))
             continue
-        sections[-1][1].append(line)
+        sections[-1][2].append(line)
 
-    for key, lines in sections:
+    for key, heading_line, lines in sections:
         text = "\n".join(lines).strip("\n")
+        # A list section holding anything but a flat list (sub-headings, code,
+        # paragraphs) would be flattened by _parse_list_lines — keep it verbatim.
+        if key in ("procedure", "pitfalls", "verification") and not _is_flat_list(text):
+            key = None
         if key is None:
             extras = text.strip()
+            if heading_line:
+                extras = f"{heading_line}\n\n{extras}".strip()
             if extras:
                 out["body_extra"] = (out["body_extra"] + "\n\n" + extras).strip()
             continue
@@ -269,6 +278,11 @@ def parse_body(body: str) -> Dict[str, Any]:
         else:
             out[key] = _parse_list_lines(text)
     return out
+
+
+def _is_flat_list(text: str) -> bool:
+    lines = [line for line in (text or "").splitlines() if line.strip()]
+    return bool(lines) and all(re.match(r"^(?:[-*]|\d+[.)])\s+", line) for line in lines)
 
 
 def _parse_list_lines(text: str) -> List[str]:
