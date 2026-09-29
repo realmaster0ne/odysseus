@@ -21,7 +21,7 @@ MAX_TOTAL_BYTES = 2_000_000
 MAX_FILE_BYTES = 400_000
 ALLOWED_SUFFIXES = (
     ".md", ".txt", ".json", ".yaml", ".yml", ".py", ".sh", ".toml",
-    ".js", ".ts", ".css", ".html", ".xml", ".csv",
+    ".js", ".cjs", ".mjs", ".ts", ".css", ".html", ".xml", ".csv",
 )
 TEXT_NAMES = {"skill.md", "license", "license.md", "readme.md"}
 _GITHUB_HOSTS = frozenset({

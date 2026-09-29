@@ -410,9 +410,13 @@ class SkillsManager:
         skill_dir = self._skill_dir(cat, nm)
         os.makedirs(skill_dir, exist_ok=True)
 
-        # Preserve bundle layout (templates/, references/, etc.) under the skill dir.
+        # Preserve bundle layout (templates/, references/, etc.) under the skill dir,
+        # relative to SKILL.md's folder so its sibling links resolve.
+        base = _rel.rsplit("/", 1)[0] + "/" if "/" in _rel else ""
         for rel, content in files.items():
-            safe = _safe_relpath(rel)
+            if not rel.startswith(base):
+                continue
+            safe = _safe_relpath(rel[len(base):])
             dest = os.path.join(skill_dir, safe)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             atomic_write_text(dest, content)
