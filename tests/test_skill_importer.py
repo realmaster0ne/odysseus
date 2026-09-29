@@ -176,3 +176,17 @@ def test_fetch_bytes_surfaces_github_error_detail(monkeypatch):
     _mock_httpx_client(monkeypatch, _Resp())
     with pytest.raises(SkillImportError, match="GitHub request failed \\(403\\): Forbidden"):
         _fetch_bytes("https://raw.githubusercontent.com/o/r/main/SKILL.md")
+
+
+def test_import_bundle_places_files_beside_skill_md(tmp_path):
+    from services.memory.skills import SkillsManager
+
+    files = {
+        "skills/engineering/tdd/SKILL.md": "---\nname: tdd\ndescription: d\n---\n\nSee [tests.md](tests.md).\n",
+        "skills/engineering/tdd/tests.md": "tests",
+        "skills/engineering/tdd/agents/openai.yaml": "x: 1",
+    }
+    entry = SkillsManager(str(tmp_path)).import_bundle_from_files(files, owner="u")
+    skill_dir = tmp_path / "skills" / "imported" / entry["name"]
+    found = sorted(p.relative_to(skill_dir).as_posix() for p in skill_dir.rglob("*") if p.is_file())
+    assert found == ["SKILL.md", "agents/openai.yaml", "tests.md"]
