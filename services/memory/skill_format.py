@@ -260,27 +260,32 @@ def parse_body(body: str) -> Dict[str, Any]:
             continue
         sections[-1][2].append(line)
 
+    # emit_body writes the known sections first, in _KNOWN_SECTIONS order and
+    # under their canonical headings, then body_extra. Only parse a section into
+    # a field when that layout reproduces it: it comes before any other content,
+    # in order, and a list section round-trips through _emit_list. Anything else
+    # (a section after an intro, "## Steps", nested lists, code) would be moved,
+    # renamed or flattened — keep it verbatim, blank lines included.
+    extras: List[str] = []
+    last = -1
     for key, heading_line, lines in sections:
         text = "\n".join(lines).strip("\n")
-        # Only parse a list section when re-emitting it reproduces it exactly;
-        # anything else (sub-headings, code, nested lists, "## Steps") would be
-        # flattened, renamed or renumbered — keep it verbatim instead.
-        if key in ("procedure", "pitfalls", "verification") and not (
-            heading_line.strip() == f"## {_KEY_TO_HEADING[key]}"
-            and _emit_list(key, _parse_list_lines(text)) == text.strip()
+        if key is not None and not (
+            not "".join(extras).strip()
+            and _KNOWN_SECTIONS.index(key) > last
+            and heading_line.strip() == f"## {_KEY_TO_HEADING[key]}"
+            and (key == "when_to_use" or _emit_list(key, _parse_list_lines(text)) == text.strip())
         ):
             key = None
         if key is None:
-            extras = text.strip()
-            if heading_line:
-                extras = f"{heading_line}\n\n{extras}".strip()
-            if extras:
-                out["body_extra"] = (out["body_extra"] + "\n\n" + extras).strip()
+            extras.append("\n".join(([heading_line] if heading_line else []) + lines))
             continue
+        last = _KNOWN_SECTIONS.index(key)
         if key == "when_to_use":
             out["when_to_use"] = text.strip()
         else:
             out[key] = _parse_list_lines(text)
+    out["body_extra"] = "\n".join(extras).strip()
     return out
 
 
