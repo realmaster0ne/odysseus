@@ -2539,7 +2539,7 @@ async def stream_agent_loop(
                 # result) before falling back to the canned apology.
                 _synth = ""
                 try:
-                    from src.llm_core import llm_call_async
+                    from src.llm_core import LLMConfig, llm_call_async
                     _synth_messages = list(messages) + [{
                         "role": "user",
                         "content": (
@@ -2552,7 +2552,9 @@ async def stream_agent_loop(
                     }]
                     _raw = await llm_call_async(
                         url=endpoint_url, model=model, messages=_synth_messages,
-                        headers=headers, temperature=0.3, max_tokens=max_tokens, timeout=60,
+                        # Prefills the whole conversation, like a chat turn: same budget.
+                        headers=headers, temperature=0.3, max_tokens=max_tokens,
+                        timeout=LLMConfig.STREAM_TIMEOUT,
                     )
                     _synth = _THINK_RE.sub("", strip_tool_blocks(_raw or "")).strip()
                 except Exception as _e:
