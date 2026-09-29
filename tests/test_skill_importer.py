@@ -40,6 +40,11 @@ def test_parse_github_tree_directory():
     assert src.path == "caveman-skill"
 
 
+def test_parse_github_clone_url_strips_dot_git():
+    src = parse_skill_source("https://github.com/mattpocock/skills.git")
+    assert (src.owner, src.repo, src.ref, src.path) == ("mattpocock", "skills", "main", "")
+
+
 def test_parse_raw_github():
     src = parse_skill_source(
         "https://raw.githubusercontent.com/o/r/main/path/SKILL.md"
