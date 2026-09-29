@@ -286,20 +286,33 @@ def parse_body(body: str) -> Dict[str, Any]:
     if not body or not body.strip():
         return out
 
-    sections: List[tuple[Optional[str], List[str]]] = [(None, [])]
+    sections: List[tuple[Optional[str], Optional[str], List[str]]] = [(None, None, [])]
+    in_fence = False
     for line in body.splitlines():
-        m = re.match(r"^##\s+(.*?)\s*$", line)
+        if re.match(r"^\s*(```|~~~)", line):
+            in_fence = not in_fence
+        m = None if in_fence else re.match(r"^##\s+(.*?)\s*$", line)
         if m:
             heading = m.group(1).strip().lower()
             key = _HEADING_TO_KEY.get(heading)
-            sections.append((key, []))
+            sections.append((key, line, []))
             continue
-        sections[-1][1].append(line)
+        sections[-1][2].append(line)
 
-    for key, lines in sections:
+    for key, heading_line, lines in sections:
         text = "\n".join(lines).strip("\n")
+        # Only parse a list section when re-emitting it reproduces it exactly;
+        # anything else (sub-headings, code, nested lists, "## Steps") would be
+        # flattened, renamed or renumbered — keep it verbatim instead.
+        if key in ("procedure", "pitfalls", "verification") and not (
+            heading_line.strip() == f"## {_KEY_TO_HEADING[key]}"
+            and _emit_list(key, _parse_list_lines(text)) == text.strip()
+        ):
+            key = None
         if key is None:
             extras = text.strip()
+            if heading_line:
+                extras = f"{heading_line}\n\n{extras}".strip()
             if extras:
                 out["body_extra"] = (out["body_extra"] + "\n\n" + extras).strip()
             continue
@@ -308,6 +321,12 @@ def parse_body(body: str) -> Dict[str, Any]:
         else:
             out[key] = _parse_list_lines(text)
     return out
+
+
+def _emit_list(key: str, items: List[str]) -> str:
+    if key == "procedure":
+        return "\n".join(f"{i + 1}. {x}" for i, x in enumerate(items))
+    return "\n".join(f"- {x}" for x in items)
 
 
 def _parse_list_lines(text: str) -> List[str]:
@@ -339,11 +358,7 @@ def emit_body(sections: Dict[str, Any]) -> str:
         if not items:
             continue
         heading = _KEY_TO_HEADING[key]
-        if key == "procedure":
-            body = "\n".join(f"{i + 1}. {x}" for i, x in enumerate(items))
-        else:
-            body = "\n".join(f"- {x}" for x in items)
-        parts.append(f"## {heading}\n\n{body}")
+        parts.append(f"## {heading}\n\n{_emit_list(key, items)}")
     extra = (sections.get("body_extra") or "").strip()
     if extra:
         parts.append(extra)
