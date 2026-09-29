@@ -413,8 +413,12 @@ class SkillsManager:
         # Preserve bundle layout (templates/, references/, etc.) under the skill dir,
         # relative to SKILL.md's folder so its sibling links resolve.
         base = _rel.rsplit("/", 1)[0] + "/" if "/" in _rel else ""
+        # Skills vendored inside this one are separate skills; a copy under the
+        # skill dir would be picked up by _iter_skill_files as a ghost duplicate.
+        nested = [p[: -len("SKILL.md")] for p in files
+                  if p.startswith(base) and p != _rel and p.split("/")[-1].lower() == "skill.md"]
         for rel, content in files.items():
-            if not rel.startswith(base):
+            if not rel.startswith(base) or any(rel.startswith(n) for n in nested):
                 continue
             safe = _safe_relpath(rel[len(base):])
             dest = os.path.join(skill_dir, safe)
