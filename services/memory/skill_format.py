@@ -262,9 +262,13 @@ def parse_body(body: str) -> Dict[str, Any]:
 
     for key, heading_line, lines in sections:
         text = "\n".join(lines).strip("\n")
-        # A list section holding anything but a flat list (sub-headings, code,
-        # paragraphs) would be flattened by _parse_list_lines — keep it verbatim.
-        if key in ("procedure", "pitfalls", "verification") and not _is_flat_list(text):
+        # Only parse a list section when re-emitting it reproduces it exactly;
+        # anything else (sub-headings, code, nested lists, "## Steps") would be
+        # flattened, renamed or renumbered — keep it verbatim instead.
+        if key in ("procedure", "pitfalls", "verification") and not (
+            heading_line.strip() == f"## {_KEY_TO_HEADING[key]}"
+            and _emit_list(key, _parse_list_lines(text)) == text.strip()
+        ):
             key = None
         if key is None:
             extras = text.strip()
@@ -280,9 +284,10 @@ def parse_body(body: str) -> Dict[str, Any]:
     return out
 
 
-def _is_flat_list(text: str) -> bool:
-    lines = [line for line in (text or "").splitlines() if line.strip()]
-    return bool(lines) and all(re.match(r"^(?:[-*]|\d+[.)])\s+", line) for line in lines)
+def _emit_list(key: str, items: List[str]) -> str:
+    if key == "procedure":
+        return "\n".join(f"{i + 1}. {x}" for i, x in enumerate(items))
+    return "\n".join(f"- {x}" for x in items)
 
 
 def _parse_list_lines(text: str) -> List[str]:
@@ -314,11 +319,7 @@ def emit_body(sections: Dict[str, Any]) -> str:
         if not items:
             continue
         heading = _KEY_TO_HEADING[key]
-        if key == "procedure":
-            body = "\n".join(f"{i + 1}. {x}" for i, x in enumerate(items))
-        else:
-            body = "\n".join(f"- {x}" for x in items)
-        parts.append(f"## {heading}\n\n{body}")
+        parts.append(f"## {heading}\n\n{_emit_list(key, items)}")
     extra = (sections.get("body_extra") or "").strip()
     if extra:
         parts.append(extra)

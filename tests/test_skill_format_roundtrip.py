@@ -30,6 +30,11 @@ def test_heading_inside_code_fence_is_not_a_section():
     assert _roundtrip(body).strip() == body.strip()
 
 
+def test_list_section_that_would_change_is_kept_verbatim():
+    body = "Intro.\n\n## Steps\n\n1. First.\n\n- option a\n- option b\n\n2. Last.\n"
+    assert _roundtrip(body).strip() == body.strip()
+
+
 def test_plain_procedure_list_still_parses():
     parsed = parse_body("## Procedure\n\n1. first\n2. second\n")
     assert parsed["procedure"] == ["first", "second"]
