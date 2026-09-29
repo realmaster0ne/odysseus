@@ -587,6 +587,7 @@ class SkillsManager:
         *,
         active_toolsets: Optional[List[str]] = None,
         platform: Optional[str] = None,
+        include_user_only: bool = False,
     ) -> List[Dict]:
         """Return the `[{name, description, category, status}]` list the
         agent sees in its system prompt.
@@ -602,6 +603,9 @@ class SkillsManager:
         Excludes user-created drafts (status=draft, source != teacher-
         escalation) — those are work-in-progress and pollute the
         prompt with half-finished procedures.
+
+        Excludes `disable-model-invocation` skills unless
+        `include_user_only` (slash-command callers, where the user picks).
         """
         out = []
         for s in self.load(owner=owner):
@@ -613,6 +617,8 @@ class SkillsManager:
                     pass  # let it through
                 else:
                     continue
+            if s.get("disable_model_invocation") and not include_user_only:
+                continue
             # Platform gating
             if platform and s.get("platforms") and platform not in s["platforms"]:
                 continue
@@ -649,11 +655,16 @@ class SkillsManager:
         threshold: float = 0.3,
         max_items: int = 5,
         min_confidence: float = 0.0,
+        include_user_only: bool = False,
     ) -> List[Dict]:
         if skills is None:
             skills = self.load_all()
         if not skills or not query.strip():
             return []
+        # `disable-model-invocation` skills only run when the user asks for
+        # them, so the model must not find them by relevance.
+        if not include_user_only:
+            skills = [s for s in skills if not s.get("disable_model_invocation")]
         # Consider published AND draft skills for relevance retrieval.
         # The teacher-escalation loop writes new skills as drafts; the
         # whole point is for the student to find them on the next try
