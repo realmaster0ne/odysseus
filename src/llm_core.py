@@ -22,7 +22,10 @@ class LLMConfig:
     DEFAULT_MAX_TOKENS = 0
     MAX_RETRIES = 3
     RETRY_DELAY = 0.5
-    STREAM_TIMEOUT = 300
+    # Read timeout for chat/agent LLM calls: how long to wait for the next byte,
+    # including prefill before the first token. Raise it for slow (e.g. CPU-only)
+    # local models with env LLM_STREAM_TIMEOUT (seconds).
+    STREAM_TIMEOUT = float(os.getenv('LLM_STREAM_TIMEOUT', '300') or '300')
     # TCP+TLS connect budget for a SINGLE attempt. The old hard-coded 3.0s
     # assumed LAN/Tailscale peers ('SYN in <100ms'); it is too tight for public
     # cloud endpoints (offshore APIs take ~0.5-1.5s cold, with jitter), so a
