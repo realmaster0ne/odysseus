@@ -1123,7 +1123,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         user = _owner(request)
         all_skills = {s.get("name"): s for s in skills_manager.load(owner=user)}
         entries = []
-        for s in skills_manager.index_for(owner=user):
+        for s in skills_manager.index_for(owner=user, include_user_only=True):
             name = (s.get("name") or "").strip()
             if not name:
                 continue
@@ -1320,7 +1320,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
         request_text = (body.get("request") or "").strip() if isinstance(body, dict) else ""
 
         invokable = {
-            s.get("name"): s for s in skills_manager.index_for(owner=user)
+            s.get("name"): s for s in skills_manager.index_for(owner=user, include_user_only=True)
             if (s.get("name") or "").strip()
         }
         match = invokable.get(skill_id)
@@ -1646,7 +1646,7 @@ def setup_skills_routes(skills_manager: SkillsManager) -> APIRouter:
             raise HTTPException(400, "query is required")
         user = _owner(request)
         skills = skills_manager.load(owner=user)
-        results = skills_manager.get_relevant_skills(query, skills, max_items=10)
+        results = skills_manager.get_relevant_skills(query, skills, max_items=10, include_user_only=True)
         return {"skills": results, "query": query, "count": len(results)}
 
     return router

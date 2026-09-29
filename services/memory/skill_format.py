@@ -80,7 +80,7 @@ def slugify(text: str, fallback: str = "skill") -> str:
 # and block lists with `-`. That covers everything in our schema and avoids
 # a new dependency.
 
-_FM_KEY_RE = re.compile(r"^([a-z_][a-z0-9_]*):\s*(.*)$", re.IGNORECASE)
+_FM_KEY_RE = re.compile(r"^([a-z_][a-z0-9_-]*):\s*(.*)$", re.IGNORECASE)
 _FM_BLOCK_LIST_RE = re.compile(r"^\s*-\s*(.*)$")
 
 
@@ -347,6 +347,7 @@ class Skill:
     teacher_model: Optional[str] = None
     owner: Optional[str] = None
     created: str = ""                                  # ISO8601
+    disable_model_invocation: bool = False             # user-invoked only (slash / by name)
     when_to_use: str = ""
     procedure: List[str] = field(default_factory=list)
     pitfalls: List[str] = field(default_factory=list)
@@ -379,6 +380,7 @@ class Skill:
         if self.teacher_model: fm["teacher_model"] = self.teacher_model
         if self.owner:         fm["owner"] = self.owner
         fm["created"] = self.created or _now_iso()
+        if self.disable_model_invocation: fm["disable-model-invocation"] = True
         return fm
 
     def to_dict(self) -> Dict[str, Any]:
@@ -393,6 +395,7 @@ class Skill:
             "requires_toolsets": list(self.requires_toolsets),
             "fallback_for_toolsets": list(self.fallback_for_toolsets),
             "status": self.status,
+            "disable_model_invocation": self.disable_model_invocation,
             "confidence": round(float(self.confidence), 3),
             "source": self.source,
             "teacher_model": self.teacher_model,
@@ -435,6 +438,7 @@ class Skill:
             teacher_model=str(fm.get("teacher_model")) if fm.get("teacher_model") else None,
             owner=str(fm.get("owner")) if fm.get("owner") else None,
             created=str(fm.get("created") or _now_iso()),
+            disable_model_invocation=fm.get("disable-model-invocation") is True,
             when_to_use=sections["when_to_use"],
             procedure=list(sections["procedure"]),
             pitfalls=list(sections["pitfalls"]),

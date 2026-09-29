@@ -187,6 +187,8 @@ async def do_manage_skills(content: str, owner: Optional[str] = None) -> Dict:
         all_skills = sm.load(owner=owner)
         if not all_skills:
             return {"results": "No skills yet. Create one with action='add'."}
+        user_only = [s for s in all_skills if s.get("disable_model_invocation")]
+        all_skills = [s for s in all_skills if not s.get("disable_model_invocation")]
         published = [s for s in all_skills if s.get("status") == "published"]
         drafts = [s for s in all_skills if s.get("status") == "draft"]
         lines = []
@@ -198,6 +200,10 @@ async def do_manage_skills(content: str, owner: Optional[str] = None) -> Dict:
             lines.append("\n## Drafts")
             for s in sorted(drafts, key=lambda x: x["name"]):
                 lines.append(f"- **{s['name']}** [draft]: {s.get('description','')}")
+        if user_only:
+            lines.append("\n## User-invoked only (use only when the user asks for one by name)")
+            for s in sorted(user_only, key=lambda x: x["name"]):
+                lines.append(f"- **{s['name']}**: {s.get('description','')}")
         return {"results": "\n".join(lines) if lines else "No skills yet."}
 
     if action == "view":
