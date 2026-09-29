@@ -197,3 +197,20 @@ def test_bundle_keeps_node_module_config_files():
 
     assert _is_text_file("dependency-cruiser.config.cjs")
     assert _is_text_file("eslint.config.mjs")
+
+
+def test_import_bundle_leaves_out_nested_skills(tmp_path):
+    from services.memory.skills import SkillsManager
+
+    files = {
+        "SKILL.md": "---\nname: parent\ndescription: d\n---\n\nBody.\n",
+        "helpers/notes.md": "notes",
+        "skills/child/SKILL.md": "---\nname: child\ndescription: d\n---\n\nChild.\n",
+        "skills/child/ref.md": "ref",
+    }
+    sm = SkillsManager(str(tmp_path))
+    sm.import_bundle_from_files(files, owner="u")
+    assert [s["name"] for s in sm.load_all()] == ["parent"]
+    skill_dir = tmp_path / "skills" / "imported" / "parent"
+    found = sorted(p.relative_to(skill_dir).as_posix() for p in skill_dir.rglob("*") if p.is_file())
+    assert found == ["SKILL.md", "helpers/notes.md"]
