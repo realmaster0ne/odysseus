@@ -113,6 +113,8 @@ def parse_skill_source(url: str) -> ResolvedSource:
     if len(bits) < 2:
         raise SkillImportError("Invalid GitHub URL")
     owner, repo = bits[0], bits[1]
+    if repo.endswith(".git"):
+        repo = repo[:-4]
     ref = "main"
     path = ""
 
