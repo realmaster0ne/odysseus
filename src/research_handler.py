@@ -729,7 +729,8 @@ class ResearchHandler:
                 temperature=0,
                 max_tokens=5,
                 headers=headers,
-                timeout=15,
+                # Covers a cold local model load (an 18 GB model takes ~30 s on CPU).
+                timeout=120,
                 max_retries=1,
             )
             logger.info(f"Endpoint probe OK: {model}")
